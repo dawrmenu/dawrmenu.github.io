@@ -461,7 +461,8 @@ function parseCSV(text){
 }
 
 async function loadMenuFromSheet(){
-  const res = await fetch(SHEET_CSV_URL, {cache: "no-store"});
+  const bustCacheUrl = SHEET_CSV_URL + '&cb=' + Date.now();
+  const res = await fetch(bustCacheUrl, {cache: "no-store"});
   if (!res.ok) throw new Error('Sheet fetch failed: ' + res.status);
   const text = await res.text();
   const rows = parseCSV(text);
