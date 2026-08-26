@@ -399,35 +399,95 @@
 <script>
 const WHATSAPP_NUMBER = "917021795641";
 
-const MENU = [
+// Live menu data source: "Mizo Dawr Menu (with images)" Google Sheet.
+// The sheet must be shared as "Anyone with the link - Viewer" for this to work.
+const SHEET_ID = "13ybAZC_qCLaFuj766Uugzd0kN0hmgb_V-FPXC2HwLMw";
+const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+
+// Used only if the live Sheet can't be reached (e.g. offline, sheet not shared correctly).
+const FALLBACK_MENU = [
   {cat:"Rice Meals", items:[
-    {name:"Rice Meal (Medium)", price:150, desc:"Rice + Beef/Pork + Bai + Pickle", img:"https://loremflickr.com/400/400/rice"},
-    {name:"Rice Meal (Full)", price:200, desc:"Rice + Beef/Pork + Bai + Pickle + Tlak + Dal", img:"https://loremflickr.com/400/400/curry"},
+    {name:"Rice Meal (Medium)", price:150, desc:"Rice + Beef/Pork + Bai + Pickle", img:"https://loremflickr.com/400/400/ricecurry"},
+    {name:"Rice Meal (Full)", price:200, desc:"Rice + Beef/Pork + Bai + Pickle + Tlak + Dal", img:"https://loremflickr.com/400/400/ricemeal"},
   ]},
   {cat:"Noodles & Porridge", items:[
-    {name:"Sanpiau", price:60, desc:"Rice Porridge", img:"https://loremflickr.com/400/400/porridge"},
+    {name:"Sanpiau", price:60, desc:"Rice Porridge", img:"https://loremflickr.com/400/400/ricepudding"},
     {name:"Chow Tui Nei", price:60, desc:"Noodle Soup", img:"https://loremflickr.com/400/400/noodlesoup"},
-    {name:"Chow Fry", price:70, desc:"Fried Noodle", img:"https://loremflickr.com/400/400/noodles"},
-    {name:"Chicken Fried Waiwai", price:60, desc:"", img:"https://loremflickr.com/400/400/chicken"},
+    {name:"Chow Fry", price:70, desc:"Fried Noodle", img:"https://loremflickr.com/400/400/friednoodles"},
+    {name:"Chicken Fried Waiwai", price:60, desc:"Fried Waiwai Noodles with Chicken", img:"https://loremflickr.com/400/400/chickennoodles"},
   ]},
   {cat:"Pork & Meat Specials", items:[
-    {name:"Sachek", price:50, desc:"Beef Intestine", img:"https://loremflickr.com/400/400/meat"},
-    {name:"Vawk Lu Bawl", price:100, desc:"Mixed Pork Head", img:"https://loremflickr.com/400/400/pork"},
-    {name:"Vawk Ke Bawl", price:100, desc:"Mixed Pork Leg", img:"https://loremflickr.com/400/400/porkbelly"},
-    {name:"Sawhchiar", price:60, desc:"", img:"https://loremflickr.com/400/400/stew"},
+    {name:"Sachek", price:50, desc:"Beef Intestine", img:"https://loremflickr.com/400/400/porkdish"},
+    {name:"Vawk Lu Bawl", price:100, desc:"Mixed Pork Head", img:"https://loremflickr.com/400/400/porkcurry"},
+    {name:"Vawk Ke Bawl", price:100, desc:"Mixed Pork Leg", img:"https://loremflickr.com/400/400/porkstew"},
+    {name:"Sawhchiar", price:60, desc:"Pork Porridge", img:"https://loremflickr.com/400/400/porkporridge"},
   ]},
   {cat:"Soups", items:[
     {name:"Vaimim Chhum", price:70, desc:"Corn Soup", img:"https://loremflickr.com/400/400/cornsoup"},
   ]},
   {cat:"Extras & Sides", items:[
-    {name:"Thingpui", price:10, desc:"Tea", img:"https://loremflickr.com/400/400/tea"},
+    {name:"Thingpui", price:10, desc:"Tea", img:"https://loremflickr.com/400/400/teacup"},
     {name:"Chhangban", price:20, desc:"Sticky Rice", img:"https://loremflickr.com/400/400/stickyrice"},
-    {name:"Artui Chhum", price:10, desc:"Boiled Egg", img:"https://loremflickr.com/400/400/egg"},
+    {name:"Artui Chhum", price:10, desc:"Boiled Egg", img:"https://loremflickr.com/400/400/boiledegg"},
     {name:"Artui Kan", price:10, desc:"Fried Egg", img:"https://loremflickr.com/400/400/friedegg"},
   ]},
 ];
 
+let MENU = [];
 let cart = {}; // key: item name -> {name, price, qty}
+
+// Minimal CSV parser that correctly handles quoted fields (so commas inside
+// an image URL or description never break the columns).
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 && r.some(v => v.trim() !== ''));
+}
+
+async function loadMenuFromSheet(){
+  const res = await fetch(SHEET_CSV_URL, {cache: "no-store"});
+  if (!res.ok) throw new Error('Sheet fetch failed: ' + res.status);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  const dataRows = rows.slice(1); // skip header row
+  const grouped = {};
+  const order = [];
+  dataRows.forEach(r => {
+    const [category, name, price, desc, available, img] = r.map(v => (v || '').trim());
+    if (!category || !name) return;
+    if (available && available.toLowerCase() !== 'yes') return;
+    if (!grouped[category]) { grouped[category] = []; order.push(category); }
+    grouped[category].push({ name, price: Number(price) || 0, desc: desc || '', img: img || '' });
+  });
+  return order.map(cat => ({ cat, items: grouped[cat] }));
+}
+
+async function initMenu(){
+  try {
+    const liveMenu = await loadMenuFromSheet();
+    MENU = liveMenu.length ? liveMenu : FALLBACK_MENU;
+  } catch (err) {
+    console.error('Could not load live menu from Sheet, using fallback:', err);
+    MENU = FALLBACK_MENU;
+  }
+  renderMenu();
+}
 
 function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
 
@@ -598,7 +658,7 @@ function sendToWhatsApp(){
   window.location.href = url;
 }
 
-renderMenu();
+initMenu();
 </script>
 
 </body>
