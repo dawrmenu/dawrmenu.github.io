@@ -455,9 +455,9 @@ function renderMenu(){
         </div>
       `;
       block.appendChild(card);
-      renderControl(item);
     });
     menu.appendChild(block);
+    group.items.forEach(item => renderControl(item));
   });
 
   // scrollspy-lite: highlight nav on click
