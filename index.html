@@ -81,37 +81,58 @@
     letter-spacing: 0.04em;
   }
 
-  .item {
-    margin-bottom: 20px;
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
-  .item-row {
+  .item {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    flex-direction: column;
+  }
+
+  .item-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #efe9da;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .item-image .placeholder {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 500;
+    color: #c2b89f;
   }
 
   .item-name {
     font-weight: 600;
-    font-size: 16px;
-    white-space: nowrap;
-  }
-
-  .leader {
-    flex: 1;
-    border-bottom: 1px dotted #c9c1ac;
-    transform: translateY(-4px);
+    font-size: 15px;
+    line-height: 1.25;
   }
 
   .item-price {
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
     color: var(--gold);
-    white-space: nowrap;
+    margin-top: 2px;
   }
 
   .item-desc {
-    font-size: 13.5px;
+    font-size: 12.5px;
     color: var(--ink-soft);
     margin-top: 3px;
     line-height: 1.4;
@@ -121,10 +142,14 @@
     opacity: 0.4;
   }
 
+  .item.unavailable .item-image {
+    filter: grayscale(1);
+  }
+
   .item.unavailable .item-name::after {
     content: " (sold out)";
     font-weight: 400;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--error);
   }
 
@@ -164,8 +189,8 @@
   // ---- SETTINGS: change these two lines per restaurant ----
   // Format: https://opensheet.elk.sh/<the-sheet-id-from-the-drive-url>/1
   // (the "1" means "first tab" - change it if the menu is on a different tab)
-  const SHEET_JSON_URL = "https://opensheet.elk.sh/1xYLOzbie7tWi454SOyH4nGmlVmKWLLg3WWdoADar4H4/1";
-  const RESTAURANT_NAME = "Sample Restaurant";
+  const SHEET_JSON_URL = "https://opensheet.elk.sh/13ybAZC_qCLaFuj766Uugzd0kN0hmgb_V-FPXC2HwLMw/1";
+  const RESTAURANT_NAME = "Mizo Dawr";
   // -----------------------------------------------------------
 
   document.getElementById("restaurant-name").textContent = RESTAURANT_NAME;
@@ -197,13 +222,16 @@
       const catItems = byCategory[cat];
       const itemsHtml = catItems.map(item => {
         const unavailable = item.available.trim().toLowerCase() === "no";
+        const initial = item.name.trim().charAt(0).toUpperCase();
+        const imageHtml = item.image
+          ? `<img src="${item.image}" alt="${item.name}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'placeholder\\'>${initial}</span>'">`
+          : `<span class="placeholder">${initial}</span>`;
+
         return `
           <div class="item ${unavailable ? 'unavailable' : ''}">
-            <div class="item-row">
-              <span class="item-name">${item.name}</span>
-              <span class="leader"></span>
-              <span class="item-price">₹${item.price}</span>
-            </div>
+            <div class="item-image">${imageHtml}</div>
+            <span class="item-name">${item.name}</span>
+            <span class="item-price">₹${item.price}</span>
             ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
           </div>`;
       }).join("");
@@ -214,7 +242,7 @@
             <h2>${cat}</h2>
             <span class="count">${catItems.length} item${catItems.length > 1 ? 's' : ''}</span>
           </div>
-          ${itemsHtml}
+          <div class="grid">${itemsHtml}</div>
         </div>`;
     }).join("");
   }
@@ -232,7 +260,8 @@
         name: (r["Item Name"] || "").trim(),
         price: (r["Price"] || "").trim(),
         description: (r["Description"] || "").trim(),
-        available: (r["Available (Yes/No)"] || "Yes").trim()
+        available: (r["Available (Yes/No)"] || "Yes").trim(),
+        image: (r["Image URL"] || "").trim()
       })).filter(item => item.name);
 
       render(items);
