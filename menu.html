@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fffdf9;
+    --ink: #211f1c;
+    --ink-soft: #6b6559;
+    --gold: #b8842b;
+    --line: #e4ddcd;
+    --error: #a23e3e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  header .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: 40px;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .category {
+    margin-top: 40px;
+  }
+
+  .category-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 18px;
+  }
+
+  .category-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0;
+  }
+
+  .category-head .count {
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+  }
+
+  .item {
+    margin-bottom: 20px;
+  }
+
+  .item-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .item-name {
+    font-weight: 600;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .leader {
+    flex: 1;
+    border-bottom: 1px dotted #c9c1ac;
+    transform: translateY(-4px);
+  }
+
+  .item-price {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  .item-desc {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  .item.unavailable {
+    opacity: 0.4;
+  }
+
+  .item.unavailable .item-name::after {
+    content: " (sold out)";
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--error);
+  }
+
+  .state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 56px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Today's Menu</div>
+    <h1 id="restaurant-name">Loading&hellip;</h1>
+  </header>
+
+  <div id="content">
+    <div class="state">Fetching the menu&hellip;</div>
+  </div>
+
+  <footer>Menu updates live &middot; scan again for changes</footer>
+</div>
+
+<script>
+  // ---- SETTINGS: change these two lines per restaurant ----
+  // Format: https://opensheet.elk.sh/<the-sheet-id-from-the-drive-url>/1
+  // (the "1" means "first tab" - change it if the menu is on a different tab)
+  const SHEET_JSON_URL = "https://opensheet.elk.sh/1xYLOzbie7tWi454SOyH4nGmlVmKWLLg3WWdoADar4H4/1";
+  const RESTAURANT_NAME = "Sample Restaurant";
+  // -----------------------------------------------------------
+
+  document.getElementById("restaurant-name").textContent = RESTAURANT_NAME;
+
+  // Allow overriding the sheet via a URL parameter, e.g. menu.html?sheet=<opensheet-url>
+  const params = new URLSearchParams(window.location.search);
+  const sheetUrl = params.get("sheet") || SHEET_JSON_URL;
+
+  function render(items) {
+    const content = document.getElementById("content");
+
+    if (!items.length) {
+      content.innerHTML = '<div class="state">The menu is empty right now. Check back soon.</div>';
+      return;
+    }
+
+    // Group items by category, preserving sheet order
+    const categories = [];
+    const byCategory = {};
+    items.forEach(item => {
+      if (!byCategory[item.category]) {
+        byCategory[item.category] = [];
+        categories.push(item.category);
+      }
+      byCategory[item.category].push(item);
+    });
+
+    content.innerHTML = categories.map(cat => {
+      const catItems = byCategory[cat];
+      const itemsHtml = catItems.map(item => {
+        const unavailable = item.available.trim().toLowerCase() === "no";
+        return `
+          <div class="item ${unavailable ? 'unavailable' : ''}">
+            <div class="item-row">
+              <span class="item-name">${item.name}</span>
+              <span class="leader"></span>
+              <span class="item-price">₹${item.price}</span>
+            </div>
+            ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+          </div>`;
+      }).join("");
+
+      return `
+        <div class="category">
+          <div class="category-head">
+            <h2>${cat}</h2>
+            <span class="count">${catItems.length} item${catItems.length > 1 ? 's' : ''}</span>
+          </div>
+          ${itemsHtml}
+        </div>`;
+    }).join("");
+  }
+
+  fetch(sheetUrl)
+    .then(res => {
+      if (!res.ok) throw new Error("Could not load the sheet");
+      return res.json();
+    })
+    .then(rows => {
+      // Each row is an object like:
+      // { Category: "Starters", "Item Name": "...", Price: "...", Description: "...", "Available (Yes/No)": "Yes" }
+      const items = rows.map(r => ({
+        category: (r["Category"] || "Menu").trim(),
+        name: (r["Item Name"] || "").trim(),
+        price: (r["Price"] || "").trim(),
+        description: (r["Description"] || "").trim(),
+        available: (r["Available (Yes/No)"] || "Yes").trim()
+      })).filter(item => item.name);
+
+      render(items);
+    })
+    .catch(err => {
+      document.getElementById("content").innerHTML =
+        `<div class="state">Couldn't load the menu right now.<br>Please try scanning again in a moment.</div>`;
+      console.error(err);
+    });
+</script>
+
+</body>
+</html>
