@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menu Photo Upload</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF5EC;
+    --paper:#FFFDF8;
+    --ink:#2B241C;
+    --brick:#A6402A;
+    --brick-dark:#813020;
+    --mustard:#C9922B;
+    --line: rgba(43,36,28,0.14);
+    --wa:#3FA35B;
+    --err:#B3261E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    padding:20px 16px 60px;
+    max-width:560px;
+    margin:0 auto;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:26px;
+    margin:8px 0 4px;
+  }
+  .sub{
+    color:rgba(43,36,28,0.65);
+    font-size:14px;
+    margin:0 0 24px;
+    line-height:1.5;
+  }
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:18px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'Fraunces',serif;
+    font-size:17px;
+    margin:0 0 10px;
+  }
+  label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:rgba(43,36,28,0.6);
+    margin:14px 0 6px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=password]{
+    width:100%;
+    padding:11px 12px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    font-size:15px;
+    font-family:inherit;
+    background:var(--cream);
+    color:var(--ink);
+  }
+  input[type=file]{
+    width:100%;
+    padding:10px 0;
+    font-size:14px;
+  }
+  .hint{
+    font-size:12.5px;
+    color:rgba(43,36,28,0.55);
+    margin-top:5px;
+    line-height:1.4;
+  }
+  .btn{
+    width:100%;
+    border:none;
+    background:var(--brick);
+    color:var(--cream);
+    font-weight:700;
+    font-size:15px;
+    padding:13px;
+    border-radius:12px;
+    cursor:pointer;
+    margin-top:18px;
+  }
+  .btn:active{background:var(--brick-dark);}
+  .btn:disabled{background:#c9c0b2; cursor:default;}
+  .btn-secondary{
+    background:transparent;
+    border:1.5px solid var(--brick);
+    color:var(--brick);
+  }
+  .btn-secondary:active{background:rgba(166,64,42,0.08);}
+  .link-btn{
+    background:none;
+    border:none;
+    color:var(--brick);
+    font-size:13px;
+    font-weight:600;
+    padding:10px 0 0;
+    cursor:pointer;
+    text-align:center;
+    width:100%;
+    text-decoration:underline;
+  }
+  .status{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.5;
+    display:none;
+  }
+  .status.show{display:block;}
+  .status.ok{background:rgba(63,163,89,0.12); color:#1f6b38; border:1px solid rgba(63,163,89,0.3);}
+  .status.err{background:rgba(179,38,30,0.1); color:var(--err); border:1px solid rgba(179,38,30,0.3);}
+  .status.working{background:rgba(43,36,28,0.06); color:var(--ink);}
+  .url-box{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    align-items:center;
+  }
+  .url-box input{
+    flex:1;
+    font-size:12.5px;
+    padding:9px 10px;
+  }
+  .copy-btn{
+    border:1.5px solid var(--brick);
+    background:transparent;
+    color:var(--brick);
+    font-weight:700;
+    font-size:12.5px;
+    padding:9px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .copy-btn.copied{background:var(--wa); border-color:var(--wa); color:#fff;}
+  img.preview{
+    width:100%;
+    max-height:220px;
+    object-fit:cover;
+    border-radius:10px;
+    margin-top:10px;
+    display:none;
+  }
+  .footer-link{
+    text-align:center;
+    margin-top:6px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Menu Photo Upload</h1>
+  <p class="sub" id="introSub">Enter the shop PIN to continue.</p>
+
+  <div class="card" id="pinCard">
+    <label>Shop PIN</label>
+    <input type="password" id="pinInput" placeholder="Enter PIN" inputmode="numeric" autocomplete="off">
+    <button class="btn" id="pinBtn">Continue</button>
+    <div class="status" id="pinStatus"></div>
+    <button class="link-btn" id="forgotLink">Forgot PIN?</button>
+  </div>
+
+  <div class="card" id="forgotCard" style="display:none;">
+    <h2>Reset PIN</h2>
+    <label>Master recovery code</label>
+    <input type="password" id="masterInput" placeholder="Enter recovery code" autocomplete="off">
+    <label>New PIN</label>
+    <input type="password" id="newPinInput" placeholder="Choose a new PIN" inputmode="numeric" autocomplete="off">
+    <button class="btn" id="resetBtn">Set New PIN</button>
+    <button class="link-btn" id="backToPinLink">Back</button>
+    <div class="status" id="forgotStatus"></div>
+  </div>
+
+  <div id="uploadSection" style="display:none;">
+  <p class="sub">Upload a dish photo here. Once it's done, copy the link it gives you and paste it into the Image URL column in your Google Sheet.</p>
+
+  <div class="card">
+    <label>Dish name (used to name the file)</label>
+    <input type="text" id="dishName" placeholder="e.g. Sachek">
+    <label>Photo</label>
+    <input type="file" id="photoFile" accept="image/*">
+    <img id="preview" class="preview">
+    <button class="btn" id="uploadBtn">Upload Photo</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="footer-link">
+    <button class="link-btn" id="changePinLink">Change PIN</button>
+  </div>
+
+  <div class="card" id="changePinCard" style="display:none;">
+    <h2>Change PIN</h2>
+    <label>New PIN</label>
+    <input type="password" id="changePinInput" placeholder="Choose a new PIN" inputmode="numeric" autocomplete="off">
+    <button class="btn" id="changePinBtn">Save New PIN</button>
+    <button class="link-btn" id="cancelChangePinLink">Cancel</button>
+    <div class="status" id="changePinStatus"></div>
+  </div>
+  </div>
+
+<script>
+// ===== CONFIGURE THESE FOR YOUR SHOP =====
+const GITHUB_OWNER = "dawrmenu";
+const GITHUB_REPO  = "dawrmenu.github.io"; // change if your repo name is different
+const SITE_BASE_URL = "https://dawrmenu.github.io"; // change if your live URL is different
+const GITHUB_TOKEN = "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"; // fine-grained token, scoped to Contents: Read & write on dawrmenu.github.io only
+const DEFAULT_PIN = "2580"; // everyday PIN — the shop staff uses this
+const MASTER_RESET_CODE = "1947"; // secret recovery code — keep this to yourself, never share with shop staff.
+// ===========================================
+
+const pinCard = document.getElementById('pinCard');
+const introSub = document.getElementById('introSub');
+const uploadSection = document.getElementById('uploadSection');
+const forgotCard = document.getElementById('forgotCard');
+
+function currentPin(){
+  return localStorage.getItem('shopPin') || DEFAULT_PIN;
+}
+
+function unlock(){
+  localStorage.setItem('shopUnlocked', 'true');
+  pinCard.style.display = 'none';
+  forgotCard.style.display = 'none';
+  introSub.style.display = 'none';
+  uploadSection.style.display = 'block';
+}
+
+// Skip straight to the upload section if this device already unlocked it before
+if (localStorage.getItem('shopUnlocked') === 'true') {
+  unlock();
+}
+
+document.getElementById('pinBtn').addEventListener('click', () => {
+  const entered = document.getElementById('pinInput').value.trim();
+  if (entered === currentPin()) {
+    unlock();
+  } else {
+    const s = document.getElementById('pinStatus');
+    s.className = 'status show err';
+    s.textContent = 'Incorrect PIN.';
+  }
+});
+
+document.getElementById('pinInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('pinBtn').click();
+});
+
+document.getElementById('forgotLink').addEventListener('click', () => {
+  pinCard.style.display = 'none';
+  forgotCard.style.display = 'block';
+});
+
+document.getElementById('backToPinLink').addEventListener('click', () => {
+  forgotCard.style.display = 'none';
+  pinCard.style.display = 'block';
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  const master = document.getElementById('masterInput').value.trim();
+  const newPin = document.getElementById('newPinInput').value.trim();
+  const s = document.getElementById('forgotStatus');
+  if (master !== MASTER_RESET_CODE) {
+    s.className = 'status show err';
+    s.textContent = 'That recovery code is incorrect.';
+    return;
+  }
+  if (!newPin) {
+    s.className = 'status show err';
+    s.textContent = 'Please choose a new PIN.';
+    return;
+  }
+  localStorage.setItem('shopPin', newPin);
+  unlock();
+});
+
+document.getElementById('changePinLink').addEventListener('click', () => {
+  document.getElementById('changePinCard').style.display = 'block';
+});
+document.getElementById('cancelChangePinLink').addEventListener('click', () => {
+  document.getElementById('changePinCard').style.display = 'none';
+});
+document.getElementById('changePinBtn').addEventListener('click', () => {
+  const newPin = document.getElementById('changePinInput').value.trim();
+  const s = document.getElementById('changePinStatus');
+  if (!newPin) {
+    s.className = 'status show err';
+    s.textContent = 'Please enter a new PIN.';
+    return;
+  }
+  localStorage.setItem('shopPin', newPin);
+  s.className = 'status show ok';
+  s.textContent = 'PIN updated.';
+  document.getElementById('changePinInput').value = '';
+});
+
+const fileInput = document.getElementById('photoFile');
+const preview = document.getElementById('preview');
+const uploadBtn = document.getElementById('uploadBtn');
+const statusEl = document.getElementById('status');
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) { preview.style.display = 'none'; return; }
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+  reader.readAsDataURL(file);
+});
+
+function slugify(s){
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function setStatus(kind, html){
+  statusEl.className = 'status show ' + kind;
+  statusEl.innerHTML = html;
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+uploadBtn.addEventListener('click', async () => {
+  const dishName = document.getElementById('dishName').value.trim();
+  const file = fileInput.files[0];
+
+  if (!dishName) { setStatus('err', 'Please enter the dish name.'); return; }
+  if (!file) { setStatus('err', 'Please choose a photo.'); return; }
+  if (file.size > 5 * 1024 * 1024) { setStatus('err', 'That photo is too large (over 5MB). Please choose a smaller one.'); return; }
+
+  uploadBtn.disabled = true;
+  setStatus('working', 'Uploading photo, please wait…');
+
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const filename = `${slugify(dishName)}-${Date.now()}.${ext}`;
+    const path = `images/${filename}`;
+    const base64Content = await fileToBase64(file);
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+    const res = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Add photo for ${dishName}`,
+        content: base64Content
+      })
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      if (res.status === 401) throw new Error('Upload was rejected — the saved key may have expired. Please tell the site developer.');
+      if (res.status === 404) throw new Error('Repository not found, or the saved key doesn\'t have permission to it.');
+      if (res.status === 403) throw new Error('The saved key doesn\'t have write permission for this repository.');
+      throw new Error(errBody.message || `Upload failed (error ${res.status}).`);
+    }
+
+    const liveUrl = `${SITE_BASE_URL}/${path}`;
+    setStatus('ok', `
+      Photo uploaded! It may take about a minute to go live.<br>
+      Copy this link and paste it into the Image URL column in your Sheet:
+      <div class="url-box">
+        <input type="text" readonly id="resultUrl" value="${liveUrl}">
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+    `);
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      const urlInput = document.getElementById('resultUrl');
+      urlInput.select();
+      navigator.clipboard.writeText(urlInput.value).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+      });
+    });
+
+    document.getElementById('dishName').value = '';
+    fileInput.value = '';
+    preview.style.display = 'none';
+
+  } catch (err) {
+    setStatus('err', err.message || 'Something went wrong. Please try again.');
+  } finally {
+    uploadBtn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
